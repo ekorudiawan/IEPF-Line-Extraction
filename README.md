@@ -1,4 +1,4 @@
-# IEPF-Line-Extraction
+# IEPF Line Extraction Algorithm
 
 IEPF (*Iterative End Point Fit*) Line Extraction
 
