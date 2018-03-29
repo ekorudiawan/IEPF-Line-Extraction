@@ -1,8 +1,12 @@
-# Author EK
+# Author Eko Rudiawan
+# import time
+from scipy import linspace, polyval, polyfit, sqrt, stats, randn
+import timeit
 import math
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import pandas as pd
 
 def measPointToPoint(varP1, varP2):
     return math.sqrt(((varP2[0]-varP1[0])*(varP2[0]-varP1[0])) + ((varP2[1]-varP1[1])*(varP2[1]-varP1[1])))
@@ -15,70 +19,37 @@ def measPointToLine(varPk, varPl, varP0):
 # Input berupa list koordinat titik dan list endpoint dari titik 
 # Ouput berupa list persamaan garis dalam bentuk Ax + By + C = 0
 def iepfFunction(dThreshold, ptList, ePtList):
+    # print ePtList
     maxDPtToLine = 0
     breakPointIndex = -1
-
-    # listLineFunc = [[0,0]]
-    # del listLineFunc[:]
-    # listLineFunc.append([])
-    # listLineFunc.append([])
-    # listLineFunc.append([])
-
-    # listLineEndPoint = [[0,0]]
-    # del listLineEndPoint[:]
-    # listLineEndPoint.append([])
-    # listLineEndPoint.append([])
-    # listLineEndPoint.append([])
-
-    # jumlahTitik = len(ptList[0])
-    jumlahEndpoint = len(ePtList[0])
-
+    _ , jumlahEndpoint = ePtList.shape  
     # loop sebanyak jumlah end point yang diinputkan
     for i in range(0, jumlahEndpoint-1):
         # A = y2 - y1 / x2 - x1
-        varA = float(ePtList[1][i+1] - ePtList[1][i]) / float(ePtList[0][i+1] - ePtList[0][i])
+        varA = float(ePtList[1,i+1] - ePtList[1,i]) / float(ePtList[0,i+1] - ePtList[0,i])
         # B = -1
         varB = -1.00
         # C = y - Ax
-        varC = float(ePtList[1][i] - varA * ePtList[0][i])
+        varC = float(ePtList[1,i] - varA * ePtList[0,i])
         # print 'IEPF Line Function {}x  + {}y + {} = 0'.format(varA, varB, varC)
-        # listLineFunc[0].append(varA)
-        # listLineFunc[1].append(varB)
-        # listLineFunc[2].append(varC)
         # loop sebanyak jumlah titik yang berada diantara endpoint
-        for j in range(ePtList[2][i],ePtList[2][i+1]):
-            # print 'j = {}'.format(j)
-            if j == 0 or j == ePtList[2][i]:
+        for j in range(ePtList[2,i],ePtList[2,i+1]):
+            if j == 0 or j == ePtList[2,i]:
                 continue
             # Pengukuran jarak titik ke line
             # d = | ax1 + by1 + c / sqrt(a^2 + b^2) |
-            dPtToLine =  float(abs((varA*ptList[0][j] + varB*ptList[1][j] + varC) / (math.sqrt(varA*varA + varB*varB))))
-            # print 'D = {}'.format(dPtToLine)
+            dPtToLine =  float(abs((varA*ptList[0,j] + varB*ptList[1,j] + varC) / (math.sqrt(varA*varA + varB*varB))))
             if dPtToLine > dThreshold:
                 if (dPtToLine > maxDPtToLine):
                     maxDPtToLine = dPtToLine
                     breakPointIndex = j
-
-    if(breakPointIndex != -1):
-        # Cari nilai MNE        
-        ePtList[0].insert(jumlahEndpoint-1, ptList[0][breakPointIndex])
-        ePtList[1].insert(jumlahEndpoint-1, ptList[1][breakPointIndex])
-        ePtList[2].insert(jumlahEndpoint-1, breakPointIndex)
-
-        # pawal = [ePtList[0][jumlahEndpoint-2],ePtList[1][jumlahEndpoint-2]]
-        # pakhir = [10,10]
-        # pnol = [5,4]
-        # varMNE0 = maxDPtToLine / measPointToLine()
-        # print ePtList
+    if(breakPointIndex != -1):        
+        y = np.array([[ptList[0,breakPointIndex]], [ptList[1,breakPointIndex]], [breakPointIndex]])
+        ePtList = np.insert(ePtList, [jumlahEndpoint-1], y, axis = 1)
         ePtList = iepfFunction(dThreshold, ptList, ePtList)
-    # else:
-        # plt.title("IEPF Algorithm")
-        # plt.plot(ptList[0], ptList[1], 'ro')
-        # plt.plot(ePtList[0], ePtList[1])
-        # plt.axis([0, 1000, 0, 1000])
-        # plt.show()
-        # print listLineFunc
+    
     return ePtList
+    
 
 def mergeLine(mneThreshold, ptList, ePtList):
     jumlahEndpoint = len(ePtList[0])
@@ -117,85 +88,56 @@ def mergeLine(mneThreshold, ptList, ePtList):
         print ePtList
     return ePtList
 
+def testSpeed(loop):
+    startTime = time.clock()
+    for i in range(0,loop):
+        P0 = [0,0]
+        P1 = [10,10]
+        measPointToPoint(P0,P1)
+    endTime = time.clock()
+    totalTime = (endTime - startTime) / loop
+    totalTime *= 1000000
+    print 'Total time {} uSeconds'.format(totalTime)
+
 def main():
-    listLineL = [[5,5],[200,550],[700,550],[600,150]]
-    listPointP = [[0,0]]
-    listGradientL = [0,0]
-    listConstantaL = [0,0]
-    # Clear list
-    del listGradientL[:]
-    del listConstantaL[:]
-    for i in range (0,len(listLineL)-1):
-        # M = (y2 - y1) / (x2 - x1)
-        varM = float(listLineL[i+1][1] - listLineL[i][1]) / float(listLineL[i+1][0] - listLineL[i][0])
-        # C = y - m * x
-        varC = float(listLineL[i][1] - varM * listLineL[i][0])
-        listGradientL.append(varM)
-        listConstantaL.append(varC)
-
-    del listPointP[:]
-    listPointP.append([])
-    listPointP.append([])
-
-    for i in range(0,len(listLineL)-1):
-        step = 0
-        if(listLineL[i][0] > listLineL[i+1][0]):
-            step = -10
-        elif(listLineL[i][0] < listLineL[i+1][0]):
-            step = 10
-        for j in range(listLineL[i][0],listLineL[i+1][0],step):
-            # Random noise
-            # simNoise = 0
-            simNoise = random.randint(-20, 20)
-            pointX = float(j + simNoise)
-            # y = mx + c
-            pointY = float((listGradientL[i] * pointX + listConstantaL[i]) + simNoise )
-            listPointP[0].append(pointX)
-            listPointP[1].append(pointY)
-
-    # Simulasi endpoint
-    '''
-    del listPointP[:]
-    listPointP.append([])
-    listPointP.append([])
-
-    listPointP[0] = [0,100,200,300,350,505,450,500,550,600]
-    listPointP[1] = [300,350,400,501,450,600,350,300,200,100]
-    '''
-
+    # Read dataset from CSV
+    df = pd.read_csv('D:\Research\IEPF-Line-Extraction\Source-Code\dataset.csv')
+    # Convert pandas to np array
+    npDataset = df.as_matrix()
+    # delete kolom no 0, transpose
+    npPoint = np.transpose(np.delete(npDataset, 0, axis=1))
+    # Ambil point x
+    # npPointX = npPoint[:,0]
+    # Ambil point y
+    # npPointY = npPoint[:,1]
     # Input 2 buah endpoint untuk masukan awal
     endPoint0 = 0
-    endPointN = len(listPointP[0])-1
+    endPointN = npPoint[0].size-1
 
-    listEndPoint = [[0,0]]
-    del listEndPoint[:]
-    listEndPoint.append([])
-    listEndPoint.append([])
-    listEndPoint.append([])
+    npEndpoint = np.zeros((3,2), dtype=int)
 
-    # endPoint0 x,y coordinat dan index
-    listEndPoint[0].append(listPointP[0][endPoint0])
-    listEndPoint[1].append(listPointP[1][endPoint0])
-    listEndPoint[2].append(endPoint0)
+    npEndpoint[0,0] = npPoint[0,endPoint0]
+    npEndpoint[1,0] = npPoint[1,endPoint0]
+    npEndpoint[2,0] = endPoint0
 
-    # endPointN x,y coordinat dan index
-    listEndPoint[0].append(listPointP[0][endPointN])
-    listEndPoint[1].append(listPointP[1][endPointN])
-    listEndPoint[2].append(endPointN+1)
+    npEndpoint[0,1] = npPoint[0,endPointN]
+    npEndpoint[1,1] = npPoint[1,endPointN]
+    npEndpoint[2,1] = endPointN
 
     # fungsi IEPF dengan threshold 100
-    lsih = iepfFunction(80, listPointP, listEndPoint)
-    print lsih
-    # lsih = mergeLine(9,listPointP,lsih)
-    plt.title("IEPF Algorithm")
-    plt.plot(listPointP[0], listPointP[1], 'ro')
-    plt.plot(lsih[0], lsih[1])
-    plt.axis([0, 1000, 0, 1000])
-    plt.show()
-    # pawal = [0,0]
-    # pakhir = [10,10]
-    # pnol = [5,4]
-    # print measPointToLine(pawal,pakhir,pnol)
+    predictedLine = iepfFunction(50, npPoint, npEndpoint)
 
+    _ , jumlahEndpoint = predictedLine.shape
+    jumlahGaris = jumlahEndpoint - 1
+    
+    clusterPoint = np.zeros((jumlahGaris,2,1))
+
+    print clusterPoint
+
+    plt.plot(npPoint[0], npPoint[1], 'ro')
+    plt.plot(predictedLine[0], predictedLine[1])
+    plt.axis([0, 640, 0, 640])
+    plt.show()
+    
 if __name__ == "__main__":
     main()
